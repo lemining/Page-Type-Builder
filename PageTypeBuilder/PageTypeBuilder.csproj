@@ -75,6 +75,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>c:\Program Files (x86)\EPiServer\CMS\6.0.530.0\bin\EPiServer.BaseLibrary.dll</HintPath>
     </Reference>
+    <Reference Include="EPiServer.Configuration, Version=6.1.379.0, Culture=neutral, PublicKeyToken=8fe83dea738b45b7, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\..\Windows\assembly\GAC_MSIL\EPiServer.Configuration\6.1.379.0__8fe83dea738b45b7\EPiServer.Configuration.dll</HintPath>
+    </Reference>
     <Reference Include="EPiServer.Framework, Version=6.0.318.113, Culture=neutral, PublicKeyToken=8fe83dea738b45b7, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>c:\Program Files (x86)\EPiServer\Framework\6.0.318.113\bin\EPiServer.Framework.dll</HintPath>

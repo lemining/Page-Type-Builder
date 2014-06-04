@@ -1,6 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Web;
+using System.Web.Caching;
+using System.Web.Profile;
+using EPiServer;
 using EPiServer.Core;
+using log4net;
+using log4net.Repository.Hierarchy;
+using EPiServer.Configuration;
 using PageTypeBuilder.Activation;
 
 namespace PageTypeBuilder
@@ -9,6 +16,7 @@ namespace PageTypeBuilder
     {
         private Dictionary<int, Type> _typeByPageTypeID = new Dictionary<int, Type>();
         private Dictionary<Type, int> _pageTypeIDByType = new Dictionary<Type, int>();
+        private ILog _logger = LogManager.GetLogger("PageTypeResolver");
 
         private static PageTypeResolver _instance;
 
@@ -63,11 +71,63 @@ namespace PageTypeBuilder
         public virtual PageData ConvertToTyped(PageData page)
         {
             Type type = GetPageTypeType(page.PageTypeID);
+            var castingTest = page as TypedPageData;
 
-            if (type == null)
+            if (type == null || castingTest != null)
+            {
+                if (type != null)
+                {
+                    if(_logger.IsDebugEnabled)
+                        _logger.Debug(string.Format("Cache hit on {0}", type.Name));
+                }
+                    
                 return page;
+            }
+                
+            var populated = Activator.CreateAndPopulateTypedInstance(page, type);
+            var pageProvider = DataFactory.Instance.GetPageProvider(page.PageLink);
+            var cacheSettings = new CacheSettings(PageCacheTimeout);
 
-            return Activator.CreateAndPopulateTypedInstance(page, type);
+            if (_logger.IsDebugEnabled)
+                _logger.Debug(string.Format("Saving to cache {0}", type.Name));
+
+            string key = DataFactoryCache.PageCommonCacheKey(page.PageLink);
+            string str2 = DataFactoryCache.PageLanguageCacheKey(page.PageLink, page.LanguageBranch);
+
+            if (cacheSettings.CancelCaching)
+            {
+                CacheManager.RemoveLocalOnly(key);
+            }
+            else
+            {
+                if (CacheManager.RuntimeCacheGet(key) == null)
+                {
+                    CacheManager.RuntimeCacheInsert(key, DateTime.UtcNow.Ticks, new CacheDependency(null, new string[] { "DataFactoryCache.MasterKey", pageProvider.ProviderCacheKey }), Cache.NoAbsoluteExpiration, PageCacheTimeout);
+                }
+                string[] filenames = (cacheSettings.FileNames.Count > 0) ? cacheSettings.FileNames.ToArray() : null;
+                List<string> list = new List<string>(new string[] { "DataFactoryCache.MasterKey", pageProvider.ProviderCacheKey, key });
+                list.AddRange(cacheSettings.CacheKeys);
+                if (page.IsMasterLanguageBranch)
+                {
+                    CacheManager.RuntimeCacheInsert(DataFactoryCache.PageMasterLanguageCacheKey(page.PageLink), populated, new CacheDependency(filenames, list.ToArray()), cacheSettings.AbsoluteExpiration, cacheSettings.SlidingExpiration);
+                }
+                CacheManager.RuntimeCacheInsert(str2, populated, new CacheDependency(filenames, list.ToArray()), cacheSettings.AbsoluteExpiration, cacheSettings.SlidingExpiration);
+            }
+
+            return populated;
+        }
+
+        private TimeSpan? _pageCacheTimeout;
+        private TimeSpan PageCacheTimeout
+        {
+            get
+            {
+                if (!_pageCacheTimeout.HasValue)
+                {
+                    _pageCacheTimeout = new TimeSpan?(Settings.Instance.PageCacheSlidingExpiration);
+                }
+                return _pageCacheTimeout.Value;
+            }
         }
 
         public static PageTypeResolver Instance

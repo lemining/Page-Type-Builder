@@ -85,6 +85,14 @@ namespace PageTypeBuilder
             }
                 
             var populated = Activator.CreateAndPopulateTypedInstance(page, type);
+
+            if (page.WorkPageID != 0)
+            {
+                _logger.Debug(string.Format("Skipping page with work ID {0}", page.WorkPageID));
+                return populated;
+            }
+
+            // Save to cache if its a final published version 
             var pageProvider = DataFactory.Instance.GetPageProvider(page.PageLink);
             var cacheSettings = new CacheSettings(PageCacheTimeout);
 

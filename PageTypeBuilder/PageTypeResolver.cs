@@ -88,7 +88,9 @@ namespace PageTypeBuilder
 
             if (page.WorkPageID != 0)
             {
-                _logger.Debug(string.Format("Skipping page with work ID {0}", page.WorkPageID));
+                if(_logger.IsDebugEnabled)
+                    _logger.Debug(string.Format("Skipping page with work ID {0}", page.WorkPageID));
+
                 return populated;
             }
 
